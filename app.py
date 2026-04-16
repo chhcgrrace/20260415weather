@@ -121,7 +121,7 @@ else:
         # --- Dynamic Map Visualization ---
         st.markdown("### 🗺️ 臺灣氣溫分佈地圖")
         
-        # Define coordinates for all major counties in Taiwan
+        # Define coordinates for all major counties and regional groups
         city_coords = {
             "基隆市": [25.13, 121.74], "臺北市": [25.04, 121.57], "新北市": [24.91, 121.55],
             "桃園市": [24.94, 121.22], "新竹市": [24.81, 120.97], "新竹縣": [24.70, 121.16],
@@ -130,7 +130,10 @@ else:
             "嘉義縣": [23.45, 120.58], "臺南市": [23.15, 120.25], "高雄市": [22.84, 120.52],
             "屏東縣": [22.42, 120.65], "宜蘭縣": [24.60, 121.60], "花蓮縣": [23.76, 121.36],
             "臺東縣": [22.89, 120.98], "澎湖縣": [23.57, 119.61], "金門縣": [24.45, 118.38],
-            "連江縣": [26.16, 119.95]
+            "連江縣": [26.16, 119.95],
+            # Regional Aggregates
+            "北部地區": [24.9, 121.3], "中部地區": [24.0, 120.7], "南部地區": [22.8, 120.4],
+            "東北部地區": [24.7, 121.7], "東部地區": [23.8, 121.4], "東南部地區": [22.8, 121.1]
         }
 
         # Prepare map data for the selected time across ALL regions
@@ -146,32 +149,36 @@ else:
                     "Lon": city_coords[r_name][1],
                     "Temp": row['maxt'],
                     "Weather": row['weather'],
-                    "Size": 15 if r_name == selected_region else 8
+                    "Size": 20 if r_name == selected_region else 10
                 })
         
         if map_data:
             map_df = pd.DataFrame(map_data)
             
-            # Create a sophisticated Mapbox scatter plot
+            # Determine map focus (Autonomous logic)
+            if selected_region in city_coords:
+                target_lat, target_lon = city_coords[selected_region]
+                zoom_level = 8.5 # Zoom in on selection
+            else:
+                target_lat, target_lon = 23.7, 121.0
+                zoom_level = 6.5
+            
             import plotly.express as px
             
-            # Determine color scale based on temperature range (Autonomous judgment)
+            # Color scale based on average temperature
             avg_temp = map_df['Temp'].mean()
-            if avg_temp > 28:
-                color_scale = px.colors.sequential.YlOrRd # Hot
-            elif avg_temp < 18:
-                color_scale = px.colors.sequential.Blues # Cold
-            else:
-                color_scale = px.colors.sequential.Viridis # Moderate
-                
+            color_scale = px.colors.sequential.YlOrRd if avg_temp > 28 else (
+                px.colors.sequential.Blues if avg_temp < 18 else px.colors.sequential.Viridis
+            )
+            
             fig_map = px.scatter_mapbox(
                 map_df, lat="Lat", lon="Lon", 
                 color="Temp", size="Size",
                 hover_name="City", 
                 hover_data={"Temp": True, "Weather": True, "Lat": False, "Lon": False, "Size": False},
                 color_continuous_scale=color_scale,
-                size_max=15, zoom=6.5,
-                center={"lat": 23.7, "lon": 121.0},
+                size_max=20, zoom=zoom_level,
+                center={"lat": target_lat, "lon": target_lon},
                 mapbox_style="carto-darkmatter"
             )
             
@@ -181,10 +188,8 @@ else:
                 plot_bgcolor='rgba(0,0,0,0)',
                 coloraxis_colorbar=dict(
                     title="Temp °C",
-                    thicknessmode="pixels", thickness=10,
-                    lenmode="fraction", len=0.5,
+                    thickness=10, len=0.5,
                     yanchor="top", y=0.9,
-                    ticks="outside",
                     tickfont=dict(color="white")
                 )
             )

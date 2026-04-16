@@ -18,7 +18,7 @@
 ## 🚀 核心特色
 *   **📡 即時數據同步**：串接 CWA 官方 API `F-C0032-003` 資料集，獲取最權威的氣象資訊。
 *   **📊 動態趨勢視覺化**：整合 Plotly 繪製未來七天的最高/最低溫趨勢，並具備氣溫區間著色功能。
-*   **🗺️ 台灣地形圖交互**：內建精美的台灣地形圖底圖，讓地理分布與預報一目了然。
+*   **🗺️ 動態地理氣溫熱圖**：整合 Plotly Mapbox 實現動態氣溫分佈顯示，自動依據氣象數據調整色階，直觀呈現全台溫差。
 *   **🔒 企業級安全性**：採用 `.env` 環境變數與 `.gitignore` 隔離敏感金鑰，確保 API Token 不外洩。
 *   **⚡ 高性能資料庫**：後端整合 SQLite3 作為緩存，減少 API 呼叫頻率並提升存取速度。
 
@@ -59,7 +59,6 @@ streamlit run app.py
 *   `app.py`: 主要的前端 UI 開發檔案。
 *   `fetch_data.py`: 核心資料抓取與處理模組。
 *   `data.db`: 本地結構化天氣資料庫。
-*   `taiwan.png`: 專屬台灣地圖底圖檔案。
 *   `requirements.txt`: 專案所需的 Python 套件清單。
 *   `log.txt`: 詳細的專案開發歷程紀錄。
 
@@ -94,12 +93,12 @@ Developed with ❤️ by Antigravity AI & USER.
 - 框架：Streamlit (搭配自訂 CSS 實現深色模式與毛玻璃卡片效果)。
 - 互動：側邊欄包含地區切換選單。
 - 組件：
-  - 左側：當前氣溫指標卡片、本地底圖圖片 (taiwan.png) 展示。
+  - 左側：當前氣溫指標卡片、動態地圖 (Mapbox) 分佈展示。
   - 右側：Plotly 溫度趨勢折線圖 (含區域填充)、詳細預報 DataFrame 表格。
 - 效能：直接匯入 fetch_data.py 之函式進行資料更新。
 
 ## 3. 部署準備
 - 包含 requirements.txt 與 .gitignore。
-- 資料庫與靜態資源：data.db 與 taiwan.png 應隨 Repo 提供以確保首次載入成功。
+- 資料庫與資料：`data.db` 應隨 Repo 提供以確保首次載入成功。
 - 完善的 README.md 說明教學。
 ```

@@ -4,7 +4,6 @@ import pandas as pd
 import plotly.graph_objects as go
 import datetime
 import os
-import base64
 from fetch_data import fetch_and_store_weather
 
 # --- Page Configuration ---
@@ -95,16 +94,6 @@ else:
     # Get available regions and times
     regions = sorted(df['regionName'].unique())
     
-    # Map coordinates mapping
-    region_coords = {
-        "北部地區": [25.04, 121.51],
-        "中部地區": [24.14, 120.67],
-        "南部地區": [22.62, 120.30],
-        "東北部地區": [24.75, 121.75],
-        "東部地區": [23.97, 121.61],
-        "東南部地區": [22.75, 121.14],
-        "臺北市": [25.03, 121.56], # Optional supplement
-    }
 
     col1, col2 = st.columns([1, 2])
 
@@ -129,37 +118,80 @@ else:
         st.markdown('</div>', unsafe_allow_html=True)
 
         # Map Visualization (Custom Image Version)
-        st.markdown("### 🗺️ 臺灣地區分布")
+        # --- Dynamic Map Visualization ---
+        st.markdown("### 🗺️ 臺灣氣溫分佈地圖")
         
-        # Calibrated positions for the provided taiwan.png
-        marker_positions = {
-            "北部地區": {"top": "25%", "left": "68%"},
-            "中部地區": {"top": "48%", "left": "55%"},
-            "南部地區": {"top": "75%", "left": "50%"},
-            "東北部地區": {"top": "28%", "left": "73%"},
-            "東部地區": {"top": "52%", "left": "68%"},
-            "東南部地區": {"top": "80%", "left": "62%"},
-            "臺北市": {"top": "22%", "left": "70%"},
+        # Define coordinates for all major counties in Taiwan
+        city_coords = {
+            "基隆市": [25.13, 121.74], "臺北市": [25.04, 121.57], "新北市": [24.91, 121.55],
+            "桃園市": [24.94, 121.22], "新竹市": [24.81, 120.97], "新竹縣": [24.70, 121.16],
+            "苗栗縣": [24.56, 120.94], "臺中市": [24.23, 120.84], "彰化縣": [24.03, 120.52],
+            "南投縣": [23.83, 120.98], "雲林縣": [23.71, 120.43], "嘉義市": [23.47, 120.45],
+            "嘉義縣": [23.45, 120.58], "臺南市": [23.15, 120.25], "高雄市": [22.84, 120.52],
+            "屏東縣": [22.42, 120.65], "宜蘭縣": [24.60, 121.60], "花蓮縣": [23.76, 121.36],
+            "臺東縣": [22.89, 120.98], "澎湖縣": [23.57, 119.61], "金門縣": [24.45, 118.38],
+            "連江縣": [26.16, 119.95]
         }
-        
-        pos = marker_positions.get(selected_region, {"top": "50%", "left": "50%"})
-        
-        # Display the user's map image with CSS-positioned marker
-        import base64
-        def get_image_base64(path):
-            with open(path, "rb") as f:
-                return base64.b64encode(f.read()).decode()
 
-        try:
-            # Using the taiwan.png provided by the user
-            img_b64 = get_image_base64("taiwan.png")
-            st.markdown(f"""
-                <div style="position: relative; width: 100%; max-width: 500px; margin: 20px auto;">
-                    <img src="data:image/png;base64,{img_b64}" style="width: 100%; border-radius: 5px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                </div>
-            """, unsafe_allow_html=True)
-        except Exception as e:
-            st.error("無法開啟資料夾中的 taiwan.png。請確認該檔案是否存在。")
+        # Prepare map data for the selected time across ALL regions
+        map_data = []
+        all_regions_at_time = df[df['dataDate'] == selected_time]
+        
+        for _, row in all_regions_at_time.iterrows():
+            r_name = row['regionName']
+            if r_name in city_coords:
+                map_data.append({
+                    "City": r_name,
+                    "Lat": city_coords[r_name][0],
+                    "Lon": city_coords[r_name][1],
+                    "Temp": row['maxt'],
+                    "Weather": row['weather'],
+                    "Size": 15 if r_name == selected_region else 8
+                })
+        
+        if map_data:
+            map_df = pd.DataFrame(map_data)
+            
+            # Create a sophisticated Mapbox scatter plot
+            import plotly.express as px
+            
+            # Determine color scale based on temperature range (Autonomous judgment)
+            avg_temp = map_df['Temp'].mean()
+            if avg_temp > 28:
+                color_scale = px.colors.sequential.YlOrRd # Hot
+            elif avg_temp < 18:
+                color_scale = px.colors.sequential.Blues # Cold
+            else:
+                color_scale = px.colors.sequential.Viridis # Moderate
+                
+            fig_map = px.scatter_mapbox(
+                map_df, lat="Lat", lon="Lon", 
+                color="Temp", size="Size",
+                hover_name="City", 
+                hover_data={"Temp": True, "Weather": True, "Lat": False, "Lon": False, "Size": False},
+                color_continuous_scale=color_scale,
+                size_max=15, zoom=6.5,
+                center={"lat": 23.7, "lon": 121.0},
+                mapbox_style="carto-darkmatter"
+            )
+            
+            fig_map.update_layout(
+                margin={"r":0,"t":0,"l":0,"b":0},
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                coloraxis_colorbar=dict(
+                    title="Temp °C",
+                    thicknessmode="pixels", thickness=10,
+                    lenmode="fraction", len=0.5,
+                    yanchor="top", y=0.9,
+                    ticks="outside",
+                    tickfont=dict(color="white")
+                )
+            )
+            
+            st.plotly_chart(fig_map, use_container_width=True)
+        else:
+            st.info("💡 目前選擇的時間點暫無地圖分佈資料。")
 
     with col2:
         # Temperature Trend Chart

@@ -4,7 +4,6 @@
 
 ## 🌐 線上展示 (Live Demo)
 👉 **[點此查看即時儀表板](https://20260415weather-isapptmew56ik9c6lyazut.streamlit.app/)**
-*(註：初次進入請點擊側邊欄的「同步最新資料」以載入數據)*
 
 ---
 
@@ -93,7 +92,7 @@ Developed with ❤️ by Antigravity AI & USER.
 
 ## 2. 視覺化展示層 (app.py)
 - 框架：Streamlit (搭配自訂 CSS 實現深色模式與毛玻璃卡片效果)。
-- 互動：側邊欄包含同步資料按鈕、地區切換選單。
+- 互動：側邊欄包含地區切換選單。
 - 組件：
   - 左側：當前氣溫指標卡片、本地底圖圖片 (taiwan.png) 展示。
   - 右側：Plotly 溫度趨勢折線圖 (含區域填充)、詳細預報 DataFrame 表格。

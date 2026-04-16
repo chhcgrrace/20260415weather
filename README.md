@@ -100,6 +100,7 @@ Developed with ❤️ by Antigravity AI & USER.
 - 效能：直接匯入 fetch_data.py 之函式進行資料更新。
 
 ## 3. 部署準備
-- 包含 requirements.txt 與 .gitignore (排除 .env 與 .db)。
+- 包含 requirements.txt 與 .gitignore。
+- 資料庫與靜態資源：data.db 與 taiwan.png 應隨 Repo 提供以確保首次載入成功。
 - 完善的 README.md 說明教學。
 ```

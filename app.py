@@ -51,27 +51,51 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Database Integration ---
+def get_db_path():
+    return os.path.join(os.path.dirname(__file__), 'data.db')
+
 def get_data():
-    if not os.path.exists('data.db'):
+    db_path = get_db_path()
+    if not os.path.exists(db_path):
         return pd.DataFrame()
     
-    conn = sqlite3.connect('data.db')
-    df = pd.read_sql_query("SELECT * FROM TemperatureForecasts", conn)
-    conn.close()
-    
-    # Convert dataDate to datetime
-    df['dataDate'] = pd.to_datetime(df['dataDate'])
-    return df
+    try:
+        conn = sqlite3.connect(db_path)
+        df = pd.read_sql_query("SELECT * FROM TemperatureForecasts", conn)
+        conn.close()
+        
+        if df.empty:
+            return df
+            
+        # Convert dataDate to datetime
+        df['dataDate'] = pd.to_datetime(df['dataDate'])
+        return df
+    except Exception as e:
+        print(f"Database error: {e}")
+        return pd.DataFrame()
 
 def refresh_data():
-    with st.spinner("正在更新天氣資料..."):
+    with st.spinner("正在連線至中央氣象署更新資料..."):
         try:
-            # 直接呼叫函式，不再使用 subprocess 以避免環境路徑問題
-            fetch_and_store_weather()
-            st.success("資料已更新！")
-            st.rerun()
+            # 呼叫更新函式
+            count = fetch_and_store_weather()
+            if count > 0:
+                st.success(f"資料已更新！成功獲取 {count} 筆預報紀錄。")
+                # 稍等一下讓訊息顯示
+                import time
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.warning("更新完成，但未偵測到新的天氣資料。")
         except Exception as e:
-            st.error(f"更新失敗: {e}")
+            st.error(f"❌ 更新失敗")
+            st.info(f"錯誤詳情: {e}")
+            st.markdown("""
+                **可能原因：**
+                1. API Key 正確性：請檢查 `.env` 檔案中的 `CWA_API_KEY`。
+                2. 網路連線：請確認伺服器可存取 `opendata.cwa.gov.tw`。
+                3. API 限制：若短時間內頻繁點擊，可能會被暫時限制。
+            """)
 
 # --- Sidebar ---
 st.sidebar.image("https://www.cwa.gov.tw/V8/assets/img/logo_CWA.png", width=200)
@@ -85,10 +109,24 @@ if st.sidebar.button("🔄 同步最新資料"):
 st.markdown('<h1 class="title-text">臺灣氣象預報中心</h1>', unsafe_allow_html=True)
 st.markdown('<p class="subtitle-text">即時氣溫預報監測系統 (CWA API 官方資料庫)</p>', unsafe_allow_html=True)
 
+# --- Data Loading ---
 df = get_data()
 
+# 如果資料庫是空的，嘗試自動執同步一次
 if df.empty:
-    st.warning("⚠️ 尚未偵測到天氣資料。請點擊側邊欄的「同步最新資料」以獲取資料。")
+    with st.status("首次啟動，正在獲取最新天氣資料...", expanded=True) as status:
+        try:
+            count = fetch_and_store_weather()
+            if count > 0:
+                st.success(f"成功獲取 {count} 筆預報紀錄！")
+                status.update(label="資料獲取完成", state="complete", expanded=False)
+                st.rerun()
+            else:
+                st.warning("無法從 API 獲取資料，請手動點擊「同步最新資料」或檢查 API Key。")
+        except Exception as e:
+            st.error(f"自動同步失敗: {e}")
+            st.warning("⚠️ 尚未偵測到天氣資料。請確保您已在 Streamlit Secrets 或 .env 中設定 `CWA_API_KEY`。")
+            st.stop()
 else:
     # Get available regions and times
     regions = sorted(df['regionName'].unique())
